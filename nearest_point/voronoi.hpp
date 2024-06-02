@@ -1,7 +1,7 @@
 #ifndef VORONOI_HPP
 #define VORONOI_HPP
 
-#include </home/cytech/nsdhw_24sp/project/Ananaee/test2/SFML/SFML2/include/SFML/Graphics.hpp>
+#include <SFML/Graphics.hpp>
 #include <vector>
 #include <random>
 #include <memory>

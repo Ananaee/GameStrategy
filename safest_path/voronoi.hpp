@@ -79,7 +79,6 @@ private:
     void generateVoronoi();
     void displayPath(const std::vector<int>& path);
     void addPoint(sf::Vector2f position);
-    void buildGraph();
     std::vector<int> aStar(int startNode, int endNode);
 };
 
