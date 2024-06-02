@@ -15,6 +15,7 @@ Voronoi::Voronoi(int width, int height, int initialPoints)
       window(sf::VideoMode(width, height), "Voronoi Diagram", sf::Style::Close | sf::Style::Titlebar, sf::ContextSettings(0, 0, 8)),
       gen(dev()), wRand(30.0, width - 30.0), hRand(30.0, height - 30.0) {
 
+    window.setPosition(sf::Vector2i(0, 0));
     coordinates.resize(pointsNumber);
     std::generate(coordinates.begin(), coordinates.end(), [&]() { return sf::Vector2f(wRand(gen), hRand(gen)); });
 

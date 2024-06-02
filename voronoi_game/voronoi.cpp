@@ -8,8 +8,10 @@ Voronoi::Voronoi(int width, int height, int maxTurns)
       window(sf::VideoMode(WIDTH, HEIGHT), "Voronoi Game", sf::Style::Close | sf::Style::Titlebar, sf::ContextSettings(0, 0, 8)) {
     window.setFramerateLimit(60);
     playerScores.resize(2, 0);
+    window.setPosition(sf::Vector2i(0, 0));
     // colors.reserve(maxTurns); // Réservez suffisamment d'espace pour le vecteur colors
 }
+
 
 bool Voronoi::initialize() {
     // Initialisation du shader

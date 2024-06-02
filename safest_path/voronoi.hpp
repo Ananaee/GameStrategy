@@ -59,7 +59,7 @@ private:
     bool selectingStartNode = true;
     sf::RenderWindow window;
     std::vector<sf::Vector2f> coordinates;
-    std::vector<std::pair<sf::CircleShape, bool>> circles; // to store the points and their selection state
+    std::vector<std::pair<sf::CircleShape, bool>> circles; 
     sf::Shader shader;
     sf::VertexArray edges;
     std::random_device dev;

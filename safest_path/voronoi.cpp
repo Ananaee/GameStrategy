@@ -9,6 +9,7 @@ Voronoi::Voronoi(int width, int height, int initialPoints)
       window(sf::VideoMode(width, height), "Voronoi Diagram", sf::Style::Close | sf::Style::Titlebar, sf::ContextSettings(0, 0, 8)),
       gen(dev()), wRand(30.0, width - 30.0), hRand(30.0, height - 30.0), edges(sf::Lines) {
 
+    window.setPosition(sf::Vector2i(0, 0));
     coordinates.resize(pointsNumber);
     std::generate(coordinates.begin(), coordinates.end(), [&]() { return sf::Vector2f(wRand(gen), hRand(gen)); });
 
@@ -74,7 +75,7 @@ void Voronoi::addPoint(sf::Vector2f position) {
 #endif
 
     pointsNumber++;
-    generateVoronoi(); // Re-generate Voronoi diagram with the new point
+    generateVoronoi(); 
 }
 
 void Voronoi::handleEvents() {
@@ -125,7 +126,6 @@ void Voronoi::handleEvents() {
                 }
                 std::cout << std::endl;
 
-                // Display path in a new window
                 displayPath(path);
             }
         }
@@ -135,7 +135,6 @@ void Voronoi::handleEvents() {
 
 
 void Voronoi::update() {
-    // Update logic if needed
 }
 
 void Voronoi::render() {
@@ -155,11 +154,8 @@ void Voronoi::render() {
 
     window.draw(sf::RectangleShape(sf::Vector2f(WIDTH, HEIGHT)), &shader);
 
-
-    // Draw Voronoi edges
     window.draw(edges);
-
-    // Draw points
+    
     for (auto& c : circles) {
         window.draw(c.first);
     }
@@ -185,7 +181,7 @@ void Voronoi::generateVoronoi() {
     for (auto it = vd.vertices().begin(); it != vd.vertices().end(); ++it) {
         const voronoi_diagram<double>::vertex_type& vertex = *it;
         float vx = vertex.x();
-        float vy = vertex.y(); // Flip y-coordinate
+        float vy = vertex.y(); 
         graphNodes.emplace_back(sf::Vector2f(vx, vy));
         vertexIndexMap[&vertex] = vertexCount++;
     }
@@ -193,6 +189,7 @@ void Voronoi::generateVoronoi() {
     for (auto it = vd.cells().begin(); it != vd.cells().end(); ++it) {
         const voronoi_diagram<double>::cell_type& cell = *it;
         const voronoi_diagram<double>::edge_type* edge = cell.incident_edge();
+        int site_index = cell.source_index();
 
         do {
             if (edge->is_primary()) {
@@ -201,16 +198,24 @@ void Voronoi::generateVoronoi() {
                 if (v0 && v1) {
                     int idx0 = vertexIndexMap[v0];
                     int idx1 = vertexIndexMap[v1];
-                    float length = sqrt(pow(v0->x() - v1->x(), 2) + pow(v0->y() - v1->y(), 2));
-                    graphNodes[idx0].neighbors.emplace_back(idx1, length);
-                    graphNodes[idx1].neighbors.emplace_back(idx0, length);
+
+                    // Compute distance from edge midpoint to Voronoi site (generator point)
+                    float site_x = inputPoints[site_index].x();
+                    float site_y = inputPoints[site_index].y();
+                    float midpoint_x = (v0->x() + v1->x()) / 2.0;
+                    float midpoint_y = (v0->y() + v1->y()) / 2.0;
+                    float distance_to_site = sqrt(pow(midpoint_x - site_x, 2) + pow(midpoint_y - site_y, 2));
+
+                    // Use distance to site as weight (store negative for max-heap behavior)
+                    graphNodes[idx0].neighbors.emplace_back(idx1, -distance_to_site);
+                    graphNodes[idx1].neighbors.emplace_back(idx0, -distance_to_site);
 
                     float v0_x = v0->x();
-                    float v0_y =  v0 ->y(); // Flip y-coordinate
+                    float v0_y = v0->y(); // Flip y-coordinate
                     float v1_x = v1->x();
                     float v1_y = v1->y(); // Flip y-coordinate
-                    edges.append(sf::Vertex(sf::Vector2f(v0_x, v0_y), sf::Color::Green));
-                    edges.append(sf::Vertex(sf::Vector2f(v1_x, v1_y), sf::Color::Green));
+                    edges.append(sf::Vertex(sf::Vector2f(v0_x, v0_y), sf::Color::Red));
+                    edges.append(sf::Vertex(sf::Vector2f(v1_x, v1_y), sf::Color::Red));
                 }
             }
             edge = edge->next();
@@ -219,7 +224,10 @@ void Voronoi::generateVoronoi() {
 }
 
 
+
 std::vector<int> Voronoi::aStar(int startNode, int endNode) {
+    std::cout << "Starting A* from node " << startNode << " to node " << endNode << std::endl;
+
     std::vector<float> gScore(graphNodes.size(), std::numeric_limits<float>::infinity());
     std::vector<float> fScore(graphNodes.size(), std::numeric_limits<float>::infinity());
     std::vector<int> cameFrom(graphNodes.size(), -1);
@@ -239,10 +247,19 @@ std::vector<int> Voronoi::aStar(int startNode, int endNode) {
     std::unordered_set<int> openSetHash;
     openSetHash.insert(startNode);
 
+    std::unordered_set<int> closedSet;
+
     while (!openSet.empty()) {
         int current = openSet.top().second;
         openSet.pop();
-        openSetHash.erase(current);
+
+        if (closedSet.find(current) != closedSet.end()) {
+            continue; // Skip this node if it has already been processed
+        }
+        
+        closedSet.insert(current);
+
+        std::cout << "Processing node " << current << std::endl;
 
         if (current == endNode) {
             std::vector<int> path;
@@ -254,6 +271,10 @@ std::vector<int> Voronoi::aStar(int startNode, int endNode) {
         }
 
         for (auto& [neighbor, weight] : graphNodes[current].neighbors) {
+            if (closedSet.find(neighbor) != closedSet.end()) {
+                continue; // Skip neighbors that have already been processed
+            }
+
             float tentative_gScore = gScore[current] + weight;
             if (tentative_gScore < gScore[neighbor]) {
                 cameFrom[neighbor] = current;
@@ -268,11 +289,16 @@ std::vector<int> Voronoi::aStar(int startNode, int endNode) {
         }
     }
 
+    std::cerr << "No path found!" << std::endl;
     return {}; // Return empty path if no path found
 }
+
+
+
+
 void Voronoi::displayPath(const std::vector<int>& path) {
     sf::RenderWindow pathWindow(sf::VideoMode(WIDTH, HEIGHT), "A* Path", sf::Style::Close | sf::Style::Titlebar);
-
+    pathWindow.setPosition(sf::Vector2i(0, 0));
     while (pathWindow.isOpen()) {
         sf::Event event;
         while (pathWindow.pollEvent(event)) {
@@ -332,3 +358,4 @@ void Voronoi::displayPath(const std::vector<int>& path) {
         pathWindow.display();
     }
 }
+

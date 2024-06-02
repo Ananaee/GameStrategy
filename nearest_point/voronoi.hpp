@@ -4,6 +4,31 @@
 #include </home/cytech/nsdhw_24sp/project/Ananaee/test2/SFML/SFML2/include/SFML/Graphics.hpp>
 #include <vector>
 #include <random>
+#include <memory>
+
+struct Point {
+    sf::Vector2f position;
+    bool hasHealthPack;
+};
+
+class Quadtree {
+public:
+    Quadtree(int level, sf::FloatRect bounds);
+    void clear();
+    void split();
+    int getIndex(const sf::Vector2f& position) const;
+    void insert(const Point& point);
+    void retrieve(std::vector<Point>& returnPoints, const sf::Vector2f& position);
+
+private:
+    static const int MAX_POINTS = 4;
+    static const int MAX_LEVELS = 5;
+
+    int level;
+    sf::FloatRect bounds;
+    std::vector<Point> points;
+    std::unique_ptr<Quadtree> nodes[4];
+};
 
 class Voronoi {
 public:
@@ -16,7 +41,9 @@ private:
     void update();
     void render();
     void addPoint(sf::Vector2f position);
-
+    void removePoint(sf::Vector2f position);
+    Point findNearestHealthPack(const sf::Vector2f& position);
+    void visualizeNearestHealthPack(const sf::Vector2f& position);
 
     const int WIDTH;
     const int HEIGHT;
@@ -27,6 +54,8 @@ private:
     sf::Shader shader;
     std::vector<sf::Vector2f> coordinates;
     std::vector<std::pair<sf::CircleShape, bool>> circles;
+
+    Quadtree quadtree;
 
 #ifdef COLORS
     std::vector<sf::Vector3f> colors;
@@ -40,6 +69,8 @@ private:
 #ifdef COLORS
     std::uniform_real_distribution<> frand;
 #endif
+
+    sf::CircleShape nearestPackCircle; // Cercle pour visualiser le point le plus proche
 };
 
 #endif // VORONOI_HPP
